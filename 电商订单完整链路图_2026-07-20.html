@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电商订单完整链路图</title>
+<script src="./mermaid.min.js"></script>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f7f8fa; color: #1f2329; }
+  header { background: #1f2329; color: #fff; padding: 18px 28px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .8; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 26px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { margin: 0 0 14px; font-size: 16px; }
+  .card .note { font-size: 12px; color: #8a919f; margin: 0 0 12px; }
+  .mermaid { background: #fff; }
+  footer { text-align: center; font-size: 12px; color: #8a919f; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>电商订单完整链路图</h1>
+  <p>B2C / C2C 综合电商 · 正向主流程 + 异常分支 + 逆向售后全类型 · 离线可看</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>图 1 · 交易主链路 + 异常分支</h2>
+    <p class="note">下单 → 支付 → 拆单 → 发货 → 物流 → 签收 → 完成 / 结算，含超时关单、风控拦截、发货/物流异常。</p>
+    <div class="mermaid">
+flowchart TD
+    A(["商品详情 / 购物车"]) --> B["创建订单草稿·预占库存"]
+    B --> C{"校验<br/>商品/库存/地址/限购/风控"}
+    C -- 不通过 --> X1["关单·释放库存"]
+    C -- 通过 --> D["确认地址/优惠/发票"]
+    D --> E["发起支付"]
+    E --> F["支付渠道"]
+    F --> G{"支付成功回调?"}
+    G -- "失败 / 超时" --> X2["超时关单·释放库存"]
+    G -- 成功 --> H(["已支付 PAID"])
+    H --> I{"风控二次校验"}
+    I -- 拦截 --> X3["人工核查 / 退款"]
+    I -- 通过 --> J["按商家拆子单"]
+    J --> K["商家接单 ACCEPTED"]
+    K --> L["拣货 / 出库"]
+    L --> M["发货·生成电子面单"]
+    M --> N["物流轨迹回传"]
+    N --> O{"买家签收?"}
+    O -- "超时自动确认" --> P(["已完成 COMPLETED"])
+    O -- "手动确认" --> P
+    P --> Q["评价"]
+    P --> R["分账结算 T+1 / T+7"]
+
+    K -. "超时未发货" .-> W1["提醒 / 平台介入 / 赔付"]
+    N -. "物流停滞 / 退回" .-> W2["异常预警·客服跟进"]
+    O -. "拒收 / 退回" .-> S0
+    S0(["买家申请售后"]) --> SF["进入图 2 售后链路"]
+    classDef endNode fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
+    classDef warn fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef ex fill:#ffebee,stroke:#e53935,color:#b71c1c;
+    class P,H endNode;
+    class W1,W2 warn;
+    class X1,X2,X3 ex;
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>图 2 · 逆向售后链路（全类型）</h2>
+    <p class="note">仅退款 / 退货退款 / 换货 三类，含商家拒绝后的平台仲裁、超时自动同意（保护买家）。</p>
+    <div class="mermaid">
+flowchart TD
+    S0(["买家申请售后"]) --> S1{"售后类型"}
+    S1 -- "仅退款·未发货" --> S2["商家 / 平台审核"]
+    S1 -- "退货退款" --> S3["商家审核"]
+    S1 -- "换货" --> S4["商家审核"]
+
+    S2 --> S2a["同意·原路退款"]
+    S2a --> S2b["退款中 REFUNDING"]
+    S2b --> S2c(["已退款 REFUNDED·关单 CLOSED"])
+
+    S3 --> S3a["买家寄回·填退回物流"]
+    S3a --> S3b["商家验货"]
+    S3b --> S3c["同意退款"]
+    S3c --> S2b
+
+    S4 --> S4a["商家重发·新物流"]
+    S4a --> S4b(["买家签收"])
+
+    S2 -- 拒绝 --> S5["平台仲裁"]
+    S3 -- 拒绝 --> S5
+    S4 -- 拒绝 --> S5
+    S5 --> S6{"仲裁判定"}
+    S6 -- "买家胜" --> S6a["执行退款 / 重发"]
+    S6 -- "商家胜" --> S6b["关闭售后"]
+
+    S2a -. "超时未处理" .-> S7["超时自动同意·保护买家"]
+    S3b -. "超时未处理" .-> S7
+    S7 --> S2b
+
+    classDef refund fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1;
+    classDef arb fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
+    classDef ex fill:#ffebee,stroke:#e53935,color:#b71c1c;
+    class S2b,S2c,S4b refund;
+    class S5,S6,S6a,S6b arb;
+    class S7 ex;
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>图 3 · 核心状态机（主单 / 子单 / 售后单）</h2>
+    <p class="note">状态视图：主单状态由子单 + 售后单聚合计算，单一事实来源。</p>
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> CREATED: 下单
+    CREATED --> PAID: 支付成功
+    PAID --> ACCEPTED: 商家接单
+    ACCEPTED --> SHIPPED: 发货
+    PAID --> SHIPPED: 发货(无接单)
+    SHIPPED --> RECEIVED: 签收
+    RECEIVED --> COMPLETED: 自动/手动确认
+    PAID --> AFTERSALE: 申请售后(挂起)
+    AFTERSALE --> COMPLETED: 售后完结
+    CREATED --> CLOSED: 超时未付
+    PAID --> CLOSED: 取消/全额退款
+    SHIPPED --> CLOSED: 退货退款完结
+    COMPLETED --> [*]
+    CLOSED --> [*]
+    </div>
+  </div>
+
+  <footer>电商订单管理系统 PRD · 完整链路图 · 自包含离线版 · 2026-07-20</footer>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose', flowchart: { htmlLabels: true, curve: 'basis' } });
+</script>
+</body>
+</html>
