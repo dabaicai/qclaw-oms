@@ -1,0 +1,29 @@
+flowchart TD
+    S0(["买家申请售后"]) --> S1{"售后类型"}
+    S1 -- "仅退款·未发货" --> S2["商家 / 平台审核"]
+    S1 -- "退货退款" --> S3["商家审核"]
+    S1 -- "换货" --> S4["商家审核"]
+    S2 --> S2a["同意·原路退款"]
+    S2a --> S2b["退款中 REFUNDING"]
+    S2b --> S2c(["已退款 REFUNDED·关单 CLOSED"])
+    S3 --> S3a["买家寄回·填退回物流"]
+    S3a --> S3b["商家验货"]
+    S3b --> S3c["同意退款"]
+    S3c --> S2b
+    S4 --> S4a["商家重发·新物流"]
+    S4a --> S4b(["买家签收"])
+    S2 -- 拒绝 --> S5["平台仲裁"]
+    S3 -- 拒绝 --> S5
+    S4 -- 拒绝 --> S5
+    S5 --> S6{"仲裁判定"}
+    S6 -- "买家胜" --> S6a["执行退款 / 重发"]
+    S6 -- "商家胜" --> S6b["关闭售后"]
+    S2a -. "超时未处理" .-> S7["超时自动同意·保护买家"]
+    S3b -. "超时未处理" .-> S7
+    S7 --> S2b
+    classDef refund fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1;
+    classDef arb fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
+    classDef ex fill:#ffebee,stroke:#e53935,color:#b71c1c;
+    class S2b,S2c,S4b refund;
+    class S5,S6,S6a,S6b arb;
+    class S7 ex;
