@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> CREATED: 下单
+    CREATED --> PAID: 支付成功
+    PAID --> ACCEPTED: 商家接单
+    ACCEPTED --> SHIPPED: 发货
+    PAID --> SHIPPED: 发货(无接单)
+    SHIPPED --> RECEIVED: 签收
+    RECEIVED --> COMPLETED: 自动/手动确认
+    PAID --> AFTERSALE: 申请售后(挂起)
+    AFTERSALE --> COMPLETED: 售后完结
+    CREATED --> CLOSED: 超时未付
+    PAID --> CLOSED: 取消/全额退款
+    SHIPPED --> CLOSED: 退货退款完结
+    COMPLETED --> [*]
+    CLOSED --> [*]
